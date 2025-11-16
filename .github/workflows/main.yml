@@ -8,11 +8,13 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: Download release info
         run: |
-          curl -H "Authorization: token ${{ secrets.TOKEN }}" \
+          curl -H "Authorization: Bearer $GH_TOKEN" \
                https://api.github.com/repos/shedowe19/kernel_samsung_sm8550susfs/releases/latest \
                -o release_info.json
           cat release_info.json
@@ -27,7 +29,7 @@ jobs:
             ASSET_NAME=$(echo $line | awk '{print $2}')
             echo $ASSET_NAME
 
-            curl -L -H "Authorization: token ${{ secrets.TOKEN }}" \
+            curl -L -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/octet-stream" \
               "https://api.github.com/repos/shedowe19/kernel_samsung_sm8550susfs/releases/assets/$ASSET_ID" \
               -o $ASSET_NAME
