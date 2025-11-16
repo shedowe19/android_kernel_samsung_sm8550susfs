@@ -13,7 +13,7 @@ jobs:
       - name: Download release info
         run: |
           curl -H "Authorization: token ${{ secrets.TOKEN }}" \
-               https://api.github.com/repos/shedowe19/kernel_samsung_sm8550susfs/releases/latest \
+               https://api.github.com/repos/qlenlen/kernel_samsung_sm8550/releases/latest \
                -o release_info.json
           cat release_info.json
           mkdir assets
@@ -29,7 +29,7 @@ jobs:
 
             curl -L -H "Authorization: token ${{ secrets.TOKEN }}" \
               -H "Accept: application/octet-stream" \
-              "https://api.github.com/repos/shedowe19/kernel_samsung_sm8550susfs/releases/assets/$ASSET_ID" \
+              "https://api.github.com/repos/qlenlen/kernel_samsung_sm8550/releases/assets/$ASSET_ID" \
               -o $ASSET_NAME
           done <<<"$ASSET_INFO"
           mv *.zip assets
