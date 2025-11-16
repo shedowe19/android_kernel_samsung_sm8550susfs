@@ -22,19 +22,31 @@ jobs:
 
       - name: Download all assets
         run: |
-          ASSET_INFO=$(jq -r '.assets[] | "\(.id) \(.name)"' release_info.json)
+          set -euo pipefail
+
+          ASSET_INFO=$(jq -r '.assets[]? | @base64' release_info.json)
+
+          if [ -z "$ASSET_INFO" ]; then
+            echo "::error::Das aktuelle Release enthält keine Assets. Lade zuerst Builds hoch."
+            exit 1
+          fi
+
           while IFS= read -r line; do
-            ASSET_ID=$(echo $line | awk '{print $1}')
-            echo $ASSET_ID
-            ASSET_NAME=$(echo $line | awk '{print $2}')
-            echo $ASSET_NAME
+            [ -z "$line" ] && continue
+
+            asset_json=$(echo "$line" | base64 --decode)
+            ASSET_ID=$(echo "$asset_json" | jq -r '.id')
+            ASSET_NAME=$(echo "$asset_json" | jq -r '.name')
 
             curl -L -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/octet-stream" \
               "https://api.github.com/repos/qlenlen/kernel_samsung_sm8550/releases/assets/$ASSET_ID" \
               -o $ASSET_NAME
           done <<<"$ASSET_INFO"
-          mv *.zip assets
+
+          shopt -s nullglob
+          mv *.zip assets/
+          shopt -u nullglob
 
       - name: Upload assets
         uses: actions/upload-artifact@v4.3.5
