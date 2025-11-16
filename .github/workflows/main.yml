@@ -10,13 +10,12 @@ jobs:
       contents: write
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      GH_REPO: ${{ github.repository }}
 
     steps:
       - name: Download release info
         run: |
-          curl -H "Authorization: Bearer $GH_TOKEN" \
-               https://api.github.com/repos/$GH_REPO/releases/latest \
+          curl -H "Authorization: token ${{ secrets.TOKEN }}" \
+               https://api.github.com/repos/qlenlen/kernel_samsung_sm8550/releases/latest \
                -o release_info.json
           cat release_info.json
           mkdir assets
@@ -32,7 +31,7 @@ jobs:
 
             curl -L -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/octet-stream" \
-              "https://api.github.com/repos/$GH_REPO/releases/assets/$ASSET_ID" \
+              "https://api.github.com/repos/qlenlen/kernel_samsung_sm8550/releases/assets/$ASSET_ID" \
               -o $ASSET_NAME
           done <<<"$ASSET_INFO"
           mv *.zip assets
