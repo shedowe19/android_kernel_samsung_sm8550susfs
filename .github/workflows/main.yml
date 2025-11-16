@@ -10,25 +10,15 @@ jobs:
       contents: write
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      GH_REPO: ${{ github.repository }}
 
     steps:
       - name: Download release info
         run: |
-          set -euo pipefail
-
-          API_URL="https://api.github.com/repos/$GH_REPO/releases/latest"
-          echo "Lade Release-Metadaten von $API_URL"
-          STATUS=$(curl -sS -w "%{http_code}" -H "Authorization: Bearer $GH_TOKEN" \
-                   "$API_URL" -o release_info.json)
-
-          if [ "$STATUS" -ne 200 ]; then
-            echo "::error::Kein Release gefunden (HTTP $STATUS). Erstelle zuerst ein Release im Repository $GH_REPO."
-            cat release_info.json
-            exit 1
-          fi
-
-          mkdir -p assets
+          curl -H "Authorization: token ${{ secrets.TOKEN }}" \
+               https://api.github.com/repos/qlenlen/kernel_samsung_sm8550/releases/latest \
+               -o release_info.json
+          cat release_info.json
+          mkdir assets
 
       - name: Download all assets
         run: |
@@ -48,12 +38,10 @@ jobs:
             ASSET_ID=$(echo "$asset_json" | jq -r '.id')
             ASSET_NAME=$(echo "$asset_json" | jq -r '.name')
 
-            echo "Lade Asset $ASSET_NAME (ID $ASSET_ID)"
-
             curl -L -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/octet-stream" \
-              "https://api.github.com/repos/$GH_REPO/releases/assets/$ASSET_ID" \
-              -o "$ASSET_NAME"
+              "https://api.github.com/repos/qlenlen/kernel_samsung_sm8550/releases/assets/$ASSET_ID" \
+              -o $ASSET_NAME
           done <<<"$ASSET_INFO"
 
           shopt -s nullglob
