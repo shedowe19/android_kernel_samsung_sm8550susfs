@@ -8,31 +8,57 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
 
     steps:
       - name: Download release info
         run: |
-          curl -H "Authorization: token ${{ secrets.TOKEN }}" \
-               https://api.github.com/repos/shedowe19/kernel_samsung_sm8550susfs/releases/latest \
-               -o release_info.json
-          cat release_info.json
-          mkdir assets
+          set -euo pipefail
+
+          API_URL="https://api.github.com/repos/$GH_REPO/releases/latest"
+          echo "Lade Release-Metadaten von $API_URL"
+          STATUS=$(curl -sS -w "%{http_code}" -H "Authorization: Bearer $GH_TOKEN" \
+                   "$API_URL" -o release_info.json)
+
+          if [ "$STATUS" -ne 200 ]; then
+            echo "::error::Kein Release gefunden (HTTP $STATUS). Erstelle zuerst ein Release im Repository $GH_REPO."
+            cat release_info.json
+            exit 1
+          fi
+
+          mkdir -p assets
 
       - name: Download all assets
         run: |
-          ASSET_INFO=$(jq -r '.assets[] | "\(.id) \(.name)"' release_info.json)
-          while IFS= read -r line; do
-            ASSET_ID=$(echo $line | awk '{print $1}')
-            echo $ASSET_ID
-            ASSET_NAME=$(echo $line | awk '{print $2}')
-            echo $ASSET_NAME
+          set -euo pipefail
 
-            curl -L -H "Authorization: token ${{ secrets.TOKEN }}" \
+          ASSET_INFO=$(jq -r '.assets[]? | @base64' release_info.json)
+
+          if [ -z "$ASSET_INFO" ]; then
+            echo "::error::Das aktuelle Release enthält keine Assets. Lade zuerst Builds hoch."
+            exit 1
+          fi
+
+          while IFS= read -r line; do
+            [ -z "$line" ] && continue
+
+            asset_json=$(echo "$line" | base64 --decode)
+            ASSET_ID=$(echo "$asset_json" | jq -r '.id')
+            ASSET_NAME=$(echo "$asset_json" | jq -r '.name')
+
+            echo "Lade Asset $ASSET_NAME (ID $ASSET_ID)"
+
+            curl -L -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/octet-stream" \
-              "https://api.github.com/repos/shedowe19/kernel_samsung_sm8550susfs/releases/assets/$ASSET_ID" \
-              -o $ASSET_NAME
+              "https://api.github.com/repos/$GH_REPO/releases/assets/$ASSET_ID" \
+              -o "$ASSET_NAME"
           done <<<"$ASSET_INFO"
-          mv *.zip assets
+
+          shopt -s nullglob
+          mv *.zip assets/
+          shopt -u nullglob
 
       - name: Upload assets
         uses: actions/upload-artifact@v4.3.5
